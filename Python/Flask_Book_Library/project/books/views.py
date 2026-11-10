@@ -1,8 +1,13 @@
+import re
 from flask import render_template, Blueprint, request, redirect, url_for, jsonify
 from project import db
 from project.books.models import Book
 from project.books.forms import CreateBook
 
+def validate_no_html(text: str) -> str:
+    if text and re.search(r'<[^>]*>', str(text)):
+        raise ValueError("Wykryto niedozwolone znaki HTML/JS.")
+    return text
 
 # Blueprint for books
 books = Blueprint('books', __name__, template_folder='templates', url_prefix='/books')
@@ -32,7 +37,13 @@ def list_books_json():
 def create_book():
     data = request.get_json()
 
-    new_book = Book(name=data['name'], author=data['author'], year_published=data['year_published'], book_type=data['book_type'])
+    try:
+        clean_name = validate_no_html(data.get('name', ''))
+        clean_author = validate_no_html(data.get('author', ''))
+    except ValueError as err:
+        return jsonify({'error': str(err)}), 400
+
+    new_book = Book(name=clean_name, author=clean_author, year_published=data['year_published'], book_type=data['book_type'])
 
     try:
         # Add the new book to the session and commit to save to the database
@@ -61,10 +72,13 @@ def edit_book(book_id):
     try:
         # Get data from the request as JSON
         data = request.get_json()
+
+        clean_name = validate_no_html(data.get('name', book.name))
+        clean_author = validate_no_html(data.get('author', book.author))
         
         # Update book details
-        book.name = data.get('name', book.name)  # Update if data exists, otherwise keep the same
-        book.author = data.get('author', book.author)
+        book.name = clean_name
+        book.author = clean_author
         book.year_published = data.get('year_published', book.year_published)
         book.book_type = data.get('book_type', book.book_type)
         
@@ -72,11 +86,13 @@ def edit_book(book_id):
         db.session.commit()
         print('Book edited successfully')
         return jsonify({'message': 'Book updated successfully'})
+    except ValueError as err:
+        return jsonify({'error': str(err)}), 400
     except Exception as e:
-        # Handle any exceptions
         db.session.rollback()
         print('Error updating book')
         return jsonify({'error': f'Error updating book: {str(e)}'}), 500
+
 
 
 # Route to fetch existing book data for editing
