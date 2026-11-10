@@ -50,7 +50,10 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error adding book: ' + JSON.stringify(error.response));
+                const errorMessage = error.response && error.response.data && error.response.data.error 
+                    ? error.response.data.error 
+                    : 'Error adding book';
+                alert(errorMessage);
             });
     };
 
@@ -107,7 +110,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error editing book: ' + JSON.stringify(error.response));
+                    const errorMessage = error.response && error.response.data && error.response.data.error 
+                        ? error.response.data.error 
+                        : 'Error editing book';
+                    alert(errorMessage);
                 });
         });
     };
